@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>ALGS PQ/CC stats - APAC North</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <link href="main.css" rel="stylesheet" />
+</head>
+
+<body>
+  <h1>ALGS PQ/CC stats - APAC North</h1>
+  <fieldset>
+    <legend>イベント</legend>
+    <div id="select_event">
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>絞り込み</legend>
+    <div>
+      週:
+      <input type="checkbox" id="week1" checked /><label for="week1">#1</label>
+      <input type="checkbox" id="week2" checked /><label for="week2">#2</label>
+      <input type="checkbox" id="week3" checked /><label for="week3">#3</label>
+      <input type="checkbox" id="week4" checked /><label for="week4">#4</label>
+    </div>
+    <div>
+      ラウンド:
+      <input type="checkbox" id="round_320to160" checked /><label for="round_320to160">320→160</label>
+      <input type="checkbox" id="round_160to80" checked /><label for="round_160to80">160→80</label>
+      <input type="checkbox" id="round_80to40" checked /><label for="round_80to40">80→40</label>
+      <input type="checkbox" id="round_semifinals" checked /><label for="round_semifinals">準決勝</label>
+      <input type="checkbox" id="round_final" checked /><label for="round_final">決勝</label>
+    </div>
+    <div>
+      マップ:
+      <input type="checkbox" id="map_we" checked /><label for="map_we">WE</label>
+      <input type="checkbox" id="map_sp" checked /><label for="map_sp">SP</label>
+    </div>
+    <div>
+      試合数:
+      <input type="number" id="games" min="1" max="128" value="1" />以上
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>対象</legend>
+    <input type="radio" id="target_players" name="target" value="players" checked /><label for="target_players">プレイヤー</label>
+    <input type="radio" id="target_teams" name="target" value="teams" /><label for="target_teams">チーム</label>
+  </fieldset>
+  <div id="players_container" class="hide">
+    <fieldset>
+      <legend>チーム表示</legend>
+      <input type="radio" id="target_teams_all" name="target_teams" value="all" checked /><label for="target_teams_all">全て</label>
+      <input type="radio" id="target_teams_no1" name="target_teams" value="no1" /><label for="target_teams_no1">#1</label>
+      <input type="radio" id="target_teams_no2" name="target_teams" value="no2" /><label for="target_teams_no2">#2</label>
+      <input type="radio" id="target_teams_no3" name="target_teams" value="no3" /><label for="target_teams_no3">#3</label>
+      <input type="radio" id="target_teams_no4" name="target_teams" value="no4" /><label for="target_teams_no4">#4</label>
+    </fieldset>
+    <h2>プレイヤー</h2>
+    <div id="players_table_index"></div>
+    <table id="players_table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>プレイヤー名</th>
+          <th id=players_th_avg class="sortable">平均キル</th>
+          <th id=players_th_kills class="sortable">合計キル</th>
+          <th id=players_th_count class="sortable">マッチ数</th>
+          <th>#1チーム</th>
+          <th>#2チーム</th>
+          <th>#3チーム</th>
+          <th>#4チーム</th>
+        </tr>
+      </thead>
+    </table>
+  </div>
+  <div id="teams_container" class="hide">
+    <h2>チーム</h2>
+    <div id="teams_table_index"></div>
+    <table id="teams_table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>チーム名</th>
+          <th id=teams_th_avgp  class="sortable">平均ポイント</th>
+          <th id=teams_th_avgpp class="sortable">平均順位ポイント</th>
+          <th id=teams_th_avgk  class="sortable">平均キル</th>
+          <th id=teams_th_avgpl class="sortable">平均順位</th>
+          <th id=teams_th_p     class="sortable">合計ポイント</th>
+          <th id=teams_th_pp    class="sortable">合計順位ポイント</th>
+          <th id=teams_th_k     class="sortable">合計キル</th>
+          <th id=teams_th_c     class="sortable">マッチ数</th>
+          <th id=teams_th_1c    class="sortable">1位(%)</th>
+          <th id=teams_th_3c    class="sortable">3位以内(%)</th>
+          <th id=teams_th_5c    class="sortable">5位以内(%)</th>
+          <th id=teams_th_10c   class="sortable">10位以内(%)</th>
+        </tr>
+      </thead>
+    </table>
+  </div>
+  <!-- スクリプト -->
+  <script type="text/javascript" src="main.js"></script>
+</body>
+
+</html>

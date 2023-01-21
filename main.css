@@ -1,0 +1,76 @@
+* {
+  font-family: 'Meiryo', 'メイリオ', sans-serif;
+}
+
+h1,
+h2 {
+  font-size: 100%;
+}
+
+table {
+  background-color: #333;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+tr {
+  background-color: #FFF;
+}
+
+th {
+  padding: 0.3em;
+  font-size: 60%;
+  font-weight: normal;
+  background-color: #333;
+  color: #FFF;
+}
+
+th.sortable {
+  cursor: pointer;
+}
+
+th.sortable:hover,
+th.sortable.sorted {
+  background-color: #666;
+}
+
+td {
+  font-size: 90%;
+  padding: 0.3em;
+}
+
+td.td_num,
+td.td_float {
+  text-align: right;
+  font-family: 'consolas', monospace;
+}
+
+td.td_str {
+  padding-right: 1em;
+}
+
+#players_table td:nth-child(1),
+#teams_table td:nth-child(1) {
+  min-width: 1.5em;
+}
+
+.hide {
+  display: none;
+}
+
+input[type=number] {
+  vertical-align: middle;
+}
+
+#players_table_index a,
+#teams_table_index a {
+  margin: 0.15em;
+  line-height: 2;
+  text-decoration: underline;
+  font-size: 90%;
+}
+
+#players_table_index a.selected,
+#teams_table_index a.selected {
+  font-weight: bold;
+}

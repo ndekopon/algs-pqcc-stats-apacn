@@ -1,0 +1,9 @@
+*
+!/index.html
+!/main.css
+!/main.js
+!/.gitignore
+!/.nojekyll
+!/events.json
+!/data/
+!/data/*.json
