@@ -19,7 +19,7 @@ const current_players = [];
 const current_teams = [];
 
 const current_players_sort = {
-  target: 'avg',
+  target: 'kills',
   available: ['avg', 'kills', 'count']
 };
 const current_teams_sort = {
