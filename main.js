@@ -696,8 +696,9 @@ const check_and_show = async () => {
 
       // チームID→チーム名
       const teams = [];
+      console.log(all_teams);
       for (const id of v.teams) {
-        teams.push(id != "" ? all_teams[id].name : "");
+        teams.push(id != "" && (id in all_teams) ? all_teams[id].name : "");
       }
 
       // playersに追加
