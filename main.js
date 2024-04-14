@@ -20,7 +20,7 @@ const current_teams = [];
 
 const current_players_sort = {
   target: 'kills',
-  available: ['avg', 'kills', 'count']
+  available: ['avg', 'kills', 'avgdamage', 'damage', 'count']
 };
 const current_teams_sort = {
   target: 'avgp',
@@ -48,18 +48,20 @@ const create_table_row = (classes) => {
 const create_players_node = () => {
   for (const v of current_players) {
     // 列を作成
-    const [tr, tds] = create_table_row(['num', 'str', 'float', 'num', 'num', 'str', 'str', 'str', 'str']);
+    const [tr, tds] = create_table_row(['num', 'str', 'float', 'num', 'float', 'num', 'num', 'str', 'str', 'str', 'str']);
 
     // テキストの設定
     tds[0].innerText = '0';
     tds[1].innerText = v.name;
     tds[2].innerText = Number.parseFloat(v.kills / v.count).toFixed(2);
     tds[3].innerText = v.kills;
-    tds[4].innerText = v.count;
-    tds[5].innerText = v.teams[0];
-    tds[6].innerText = v.teams[1];
-    tds[7].innerText = v.teams[2];
-    tds[8].innerText = v.teams[3];
+    tds[4].innerText = Number.parseFloat(v.damagecount > 0 ? v.damage / v.damagecount : 0).toFixed(1);
+    tds[5].innerText = v.damage;
+    tds[6].innerText = v.count;
+    tds[7].innerText = v.teams[0];
+    tds[8].innerText = v.teams[1];
+    tds[9].innerText = v.teams[2];
+    tds[10].innerText = v.teams[3];
 
     // 保存
     v.node = tr;
@@ -166,6 +168,8 @@ const sort_players = () => {
   return current_players.sort((a, b) => {
     const a_avg = a.kills / a.count;
     const b_avg = b.kills / b.count;
+    const a_avgdamage = a.damagecount > 0 ? a.damage / a.damagecount : 0.0;
+    const b_avgdamage = b.damagecount > 0 ? b.damage / b.damagecount : 0.0;
     if (current_players_sort.target == 'avg') {
       if (a_avg > b_avg) return -1;
       if (a_avg < b_avg) return 1;
@@ -176,6 +180,22 @@ const sort_players = () => {
       if (a.kills < b.kills) return 1;
       if (a.count < b.count) return -1;
       if (a.count > b.count) return 1;
+      if (a_avgdamage > b_avgdamage) return -1;
+      if (a_avgdamage < b_avgdamage) return 1;
+    } else if (current_players_sort.target == 'avgdamage') {
+      if (a_avgdamage > b_avgdamage) return -1;
+      if (a_avgdamage < b_avgdamage) return 1;
+      if (a.count < b.count) return -1;
+      if (a.count > b.count) return 1;
+      if (a.kills > b.kills) return -1;
+      if (a.kills < b.kills) return 1;
+    } else if (current_players_sort.target == 'damage') {
+      if (a.damage > b.damage) return -1;
+      if (a.damage < b.damage) return 1;
+      if (a.count < b.count) return -1;
+      if (a.count > b.count) return 1;
+      if (a.kills > b.kills) return -1;
+      if (a.kills < b.kills) return 1;
     } else if (current_players_sort.target == 'count') {
       if (a.count > b.count) return -1;
       if (a.count < b.count) return 1;
@@ -196,8 +216,8 @@ const show_player_teams = () => {
   const target = current_select.target_teams;
   for (const i of [0, 1, 2, 3]) {
     const target_no = 'no' + (i + 1);
-    const s_tr = '#players_container tr th:nth-child(' + (i + 6) + ')';
-    const s_td = '#players_container tr td:nth-child(' + (i + 6) + ')';
+    const s_tr = '#players_container tr th:nth-child(' + (i + 8) + ')';
+    const s_td = '#players_container tr td:nth-child(' + (i + 8) + ')';
     const selector = s_tr + ',' + s_td;
     if (target == 'all' || target == target_no) {
       document.querySelectorAll(selector).forEach((item) => {
@@ -231,6 +251,10 @@ const show_players = () => {
       target_value = v.kills / v.count;
     } else if (current_players_sort.target == 'kills') {
       target_value = v.kills;
+    } else if (current_players_sort.target == 'avgdamage') {
+      target_value = v.damagecount > 0 ? v.damage / v.damagecount : 0;
+    } else if (current_players_sort.target == 'damage') {
+      target_value = v.damage;
     } else if (current_players_sort.target == 'count') {
       target_value = v.count;
     }
@@ -675,6 +699,8 @@ const check_and_show = async () => {
   current_select.target_teams = get_current_target_teams();
 
   if (requeue) {
+    console.log("==event==");
+    console.log(event);
     // 空にする
     current_players.splice(0);
 
@@ -683,14 +709,22 @@ const check_and_show = async () => {
       if (k != v.id[0]) continue;
       let count = 0;
       let kills = 0;
+      let damage = 0;
+      let damagecount = 0;
       for (const game of v.games) {
         const cc = game.cc;
         const r = all_rounds[cc] - game.round - 1;
         if (!weeks[cc]) continue; // week確認
         if (!rounds[r]) continue; // ラウンド確認
-        if (!maps[game.map]) continue; // マップ確認            
+        if (!maps[game.map]) continue; // マップ確認
         count++;
         kills += game.kills;
+        if ('damage' in game) {
+          damage += game.damage;
+          if (event != "data/y4cc1" || cc >= 2) {
+            damagecount++;
+          }
+        }
       }
       if (count < games) continue; // ゲーム数確認
 
@@ -706,7 +740,9 @@ const check_and_show = async () => {
         name: v.name,
         teams: teams,
         count: count,
-        kills: kills
+        kills: kills,
+        damage: damage,
+        damagecount: damagecount
       });
     }
 
