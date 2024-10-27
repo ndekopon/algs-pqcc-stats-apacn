@@ -1,5 +1,3 @@
-"use strict";
-
 // グローバル変数
 const all_events = [];
 let all_rounds = [];
@@ -633,7 +631,9 @@ const get_current_rounds = () => {
 const get_current_maps = () => {
   return {
     w: document.getElementById('map_we').checked,
-    s: document.getElementById('map_sp').checked
+    s: document.getElementById('map_sp').checked,
+    k: document.getElementById('map_kc').checked,
+    e: document.getElementById('map_ed').checked,
   };
 };
 
