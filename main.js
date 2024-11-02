@@ -634,6 +634,7 @@ const get_current_maps = () => {
     s: document.getElementById('map_sp').checked,
     k: document.getElementById('map_kc').checked,
     e: document.getElementById('map_ed').checked,
+    o: document.getElementById('map_ol').checked,
   };
 };
 
@@ -720,8 +721,8 @@ const check_and_show = async () => {
         count++;
         kills += game.kills;
         if ('damage' in game) {
-          damage += game.damage;
-          if (event != "data/y4cc1" || cc >= 2) {
+          if (game.damage != null) {
+            damage += game.damage;
             damagecount++;
           }
         }
