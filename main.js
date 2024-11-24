@@ -55,7 +55,11 @@ const create_players_node = () => {
     tds[3].innerText = v.kills;
     tds[4].innerText = Number.parseFloat(v.damagecount > 0 ? v.damage / v.damagecount : 0).toFixed(1);
     tds[5].innerText = v.damage;
-    tds[6].innerText = v.count;
+    if (v.count == v.damagecount) {
+      tds[6].innerText = v.count;
+    } else {
+      tds[6].innerHTML = `${v.count}<span class=damagecount>[${v.damagecount}]</span>`;
+    }
     tds[7].innerText = v.teams[0];
     tds[8].innerText = v.teams[1];
     tds[9].innerText = v.teams[2];
@@ -634,6 +638,7 @@ const get_current_maps = () => {
     s: document.getElementById('map_sp').checked,
     k: document.getElementById('map_kc').checked,
     e: document.getElementById('map_ed').checked,
+    b: document.getElementById('map_bm').checked,
     o: document.getElementById('map_ol').checked,
   };
 };
