@@ -50,6 +50,13 @@
     <input type="radio" id="target_players" name="target" value="players" checked /><label for="target_players">プレイヤー</label>
     <input type="radio" id="target_teams" name="target" value="teams" /><label for="target_teams">チーム</label>
   </fieldset>
+  <fieldset>
+    <legend>表示数</legend>
+    <input type="radio" id="displaycount_10" name="displaycount" value="10" /><label for="displaycount_10">10</label>
+    <input type="radio" id="displaycount_20" name="displaycount" value="20" checked /><label for="displaycount_20">20</label>
+    <input type="radio" id="displaycount_50" name="displaycount" value="50" /><label for="displaycount_50">50</label>
+    <input type="radio" id="displaycount_all" name="displaycount" value="all" /><label for="displaycount_all">全て</label>
+  </fieldset>
   <div id="players_container" class="hide">
     <fieldset>
       <legend>チーム表示</legend>
@@ -77,6 +84,8 @@
           <th>#4チーム</th>
         </tr>
       </thead>
+      <tbody id="players_body">
+      </tbody>
     </table>
   </div>
   <div id="teams_container" class="hide">
@@ -101,6 +110,8 @@
           <th id=teams_th_10c   class="sortable">10位以内(%)</th>
         </tr>
       </thead>
+      <tbody id="teams_body">
+      </tbody>
     </table>
   </div>
   <!-- スクリプト -->

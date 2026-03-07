@@ -1,16 +1,18 @@
 // グローバル変数
-const all_events = [];
-let all_rounds = [];
-let all_players = {};
-let all_teams = {};
+const worker = new Worker('worker.js', { type: 'module' });
+
+const all_players = {};
+const all_teams = {};
+
 const current_select = {
   event: '',
   weeks: [true, true, true, true],
   rounds: [true, true, true, true, true],
-  maps: { w: true, s: true },
+  maps: { w: true, s: true, k: true, e: true, b: true, o: true },
   games: 1,
   target: '',
-  target_teams: 'all'
+  target_teams: 'all',
+  displaycount: 10
 };
 
 const current_players = [];
@@ -28,84 +30,160 @@ const current_teams_sort = {
 // ---------------------------------------------------------
 // create_table_row
 // ---------------------------------------------------------
-const create_table_row = (classes) => {
-  const tr = document.createElement('tr');
-  const tds = [];
+const create_table_row = (tr, classes) => {
   for (const c of classes) {
     const td = document.createElement('td');
     td.classList.add('td_' + c);
-    tds.push(td);
     tr.appendChild(td);
   }
-  return [tr, tds];
 };
 
 // ---------------------------------------------------------
-// create_players_node
+// PlayersTable
 // ---------------------------------------------------------
-const create_players_node = () => {
-  for (const v of current_players) {
-    // 列を作成
-    const [tr, tds] = create_table_row(['num', 'str', 'float', 'num', 'float', 'num', 'num', 'str', 'str', 'str', 'str']);
+class PlayersTable {
+  #basenode = null;
+  #players = new Map();
+  #tbody = document.getElementById('players_body');
+  constructor() {
+    this.#basenode = document.createElement('tr');
+    create_table_row(this.#basenode, ['num', 'str', 'float', 'num', 'float', 'num', 'num', 'str', 'str', 'str', 'str']);
+  }
 
-    // テキストの設定
-    tds[0].innerText = '0';
-    tds[1].innerText = v.name;
-    tds[2].innerText = Number.parseFloat(v.kills / v.count).toFixed(2);
-    tds[3].innerText = v.kills;
-    tds[4].innerText = Number.parseFloat(v.damagecount > 0 ? v.damage / v.damagecount : 0).toFixed(1);
-    tds[5].innerText = v.damage;
-    if (v.count == v.damagecount) {
-      tds[6].innerText = v.count;
-    } else {
-      tds[6].innerHTML = `${v.count}<span class=damagecount>[${v.damagecount}]</span>`;
+  #updateNode(id, player) {
+    // 空の場合は作成
+    if (!this.#players.has(id)) {
+      this.#players.set(id, this.#basenode.cloneNode(true));
     }
-    tds[7].innerText = v.teams[0];
-    tds[8].innerText = v.teams[1];
-    tds[9].innerText = v.teams[2];
-    tds[10].innerText = v.teams[3];
-
-    // 保存
-    v.node = tr;
-  }
-};
-
-// ---------------------------------------------------------
-// create_teams_node
-// ---------------------------------------------------------
-const create_teams_node = () => {
-  for (const v of current_teams) {
-    // 列を作成
-    const [tr, tds] = create_table_row(['num', 'str', 'float', 'float', 'float', 'float', 'num', 'num', 'num', 'num', 'float', 'float', 'float', 'float']);
+    const node = this.#players.get(id);
 
     // テキストの設定
-    tds[0].innerText = '0';
-    tds[1].innerText = v.name;
-    tds[2].innerText = Number.parseFloat(v.points / v.placements.length).toFixed(2);
-    tds[3].innerText = Number.parseFloat((v.points - v.kills) / v.placements.length).toFixed(2);
-    tds[4].innerText = Number.parseFloat(v.kills / v.placements.length).toFixed(2);
-    tds[5].innerText = Number.parseFloat(v.placements.reduce((p, c) => p + c, 0) / v.placements.length).toFixed(2);
-    tds[6].innerText = v.points;
-    tds[7].innerText = v.points - v.kills;
-    tds[8].innerText = v.kills;
-    tds[9].innerText = v.placements.length;
-    tds[10].innerText = Number.parseFloat(v.placements.reduce((p, c) => c == 1 ? p + 1 : p, 0) / v.placements.length * 100).toFixed(1);
-    tds[11].innerText = Number.parseFloat(v.placements.reduce((p, c) => c <= 3 ? p + 1 : p, 0) / v.placements.length * 100).toFixed(1);
-    tds[12].innerText = Number.parseFloat(v.placements.reduce((p, c) => c <= 5 ? p + 1 : p, 0) / v.placements.length * 100).toFixed(1);
-    tds[13].innerText = Number.parseFloat(v.placements.reduce((p, c) => c <= 10 ? p + 1 : p, 0) / v.placements.length * 100).toFixed(1);
+    node.children[0].innerText = player.rank;
+    node.children[1].innerText = player.name;
+    node.children[2].innerText = Number.parseFloat(player.kavg).toFixed(2);
+    node.children[3].innerText = player.kills;
+    node.children[4].innerText = Number.parseFloat(player.davg).toFixed(1);
+    node.children[5].innerText = player.damage;
+    if (player.count == player.damagecount) {
+      node.children[6].innerText = player.count;
+    } else {
+      node.children[6].innerHTML = `${player.count}<span class=damagecount>[${player.damagecount}]</span>`;
+    }
+    node.children[7].innerText = player.teams[0];
+    node.children[8].innerText = player.teams[1];
+    node.children[9].innerText = player.teams[2];
+    node.children[10].innerText = player.teams[3];
 
-    // 保存
-    v.node = tr;
+    return node;
   }
-};
+
+  updateShowTeams() {
+    const table = document.getElementById('players_table');
+    switch (current_select.target_teams) {
+      case 'no1':
+        table.classList.remove('hide_no1');
+        table.classList.add('hide_no2');
+        table.classList.add('hide_no3');
+        table.classList.add('hide_no4');
+        break;
+      case 'no2':
+        table.classList.add('hide_no1');
+        table.classList.remove('hide_no2');
+        table.classList.add('hide_no3');
+        table.classList.add('hide_no4');
+        break;
+      case 'no3':
+        table.classList.add('hide_no1');
+        table.classList.add('hide_no2');
+        table.classList.remove('hide_no3');
+        table.classList.add('hide_no4');
+        break;
+      case 'no4':
+        table.classList.add('hide_no1');
+        table.classList.add('hide_no2');
+        table.classList.add('hide_no3');
+        table.classList.remove('hide_no4');
+        break;
+      default:
+        table.classList.remove('hide_no1');
+        table.classList.remove('hide_no2');
+        table.classList.remove('hide_no3');
+        table.classList.remove('hide_no4');
+    }
+  }
+
+  show(players) {
+    this.#tbody.classList.add('updating');
+
+    // 一旦クリア
+    while (this.#tbody.firstChild) {
+      this.#tbody.removeChild(this.#tbody.firstChild);
+    }
+
+    for (const player of players) {
+      this.#tbody.appendChild(this.#updateNode(player.id, player));
+    }
+
+    this.updateShowTeams();
+
+    this.#tbody.classList.remove('updating');
+  }
+}
+
 
 // ---------------------------------------------------------
-// create_node
+// TeamsTable
 // ---------------------------------------------------------
-const create_node = () => {
-  create_players_node();
-  create_teams_node();
-};
+class TeamsTable {
+  #basenode = null;
+  #teams = new Map();
+  #tbody = document.getElementById('teams_body');
+  constructor() {
+    this.#basenode = document.createElement('tr');
+    create_table_row(this.#basenode, ['num', 'str', 'float', 'float', 'float', 'float', 'num', 'num', 'num', 'num', 'float', 'float', 'float', 'float']);
+  }
+
+  #updateNode(id, team) {
+    // 空の場合は作成
+    if (!this.#teams.has(id)) {
+      this.#teams.set(id, this.#basenode.cloneNode(true));
+    }
+    const node = this.#teams.get(id);
+
+    // テキストの設定
+    node.children[0].innerText = team.rank;
+    node.children[1].innerText = team.name;
+    node.children[2].innerText = Number.parseFloat(team.averagepoints).toFixed(2);
+    node.children[3].innerText = Number.parseFloat(team.averageplacementpoints).toFixed(2);
+    node.children[4].innerText = Number.parseFloat(team.averagekills).toFixed(2);
+    node.children[5].innerText = Number.parseFloat(team.averageplacement).toFixed(2);
+    node.children[6].innerText = team.points;
+    node.children[7].innerText = team.placementpoints;
+    node.children[8].innerText = team.kills;
+    node.children[9].innerText = team.count;
+    node.children[10].innerText = Number.parseFloat(team.top1rate * 100).toFixed(1);
+    node.children[11].innerText = Number.parseFloat(team.top3rate * 100).toFixed(1);
+    node.children[12].innerText = Number.parseFloat(team.top5rate * 100).toFixed(1);
+    node.children[13].innerText = Number.parseFloat(team.top10rate * 100).toFixed(1);
+
+    return node;
+  }
+
+  show(teams) {
+    this.#tbody.classList.add('updating');
+
+    // 一旦クリア
+    while (this.#tbody.firstChild) {
+      this.#tbody.removeChild(this.#tbody.firstChild);
+    }
+
+    for (const team of teams) {
+      this.#tbody.appendChild(this.#updateNode(team.id, team));
+    }
+
+    this.#tbody.classList.remove('updating');
+  }
+}
 
 // ---------------------------------------------------------
 // change_players_sort_header
@@ -138,384 +216,6 @@ const change_teams_sort_header = () => {
 };
 
 // ---------------------------------------------------------
-// show_table_by_index
-// ---------------------------------------------------------
-const show_table_by_index = (target, id) => {
-  const target_table = target + '_table';
-  const target_id = target + '_body' + id;
-  const target_index = target + '_table_index_' + id;
-  // テーブルの表示
-  document.querySelectorAll('table#' + target + '_table tbody').forEach((tbody) => {
-    if (tbody.id == target_id) {
-      tbody.classList.remove('hide');
-    } else {
-      tbody.classList.add('hide');
-    }
-  });
-
-  // リンクの表示
-  document.querySelectorAll('div#' + target + '_table_index a').forEach((a) => {
-    console.log(target_index);
-    if (a.id == target_index) {
-      a.classList.add('selected');
-    } else {
-      a.classList.remove('selected');
-    }
-  });
-};
-// ---------------------------------------------------------
-// sort_players
-// ---------------------------------------------------------
-const sort_players = () => {
-  return current_players.sort((a, b) => {
-    const a_avg = a.kills / a.count;
-    const b_avg = b.kills / b.count;
-    const a_avgdamage = a.damagecount > 0 ? a.damage / a.damagecount : 0.0;
-    const b_avgdamage = b.damagecount > 0 ? b.damage / b.damagecount : 0.0;
-    if (current_players_sort.target == 'avg') {
-      if (a_avg > b_avg) return -1;
-      if (a_avg < b_avg) return 1;
-      if (a.count > b.count) return -1;
-      if (a.count < b.count) return 1;
-    } else if (current_players_sort.target == 'kills') {
-      if (a.kills > b.kills) return -1;
-      if (a.kills < b.kills) return 1;
-      if (a.count < b.count) return -1;
-      if (a.count > b.count) return 1;
-      if (a_avgdamage > b_avgdamage) return -1;
-      if (a_avgdamage < b_avgdamage) return 1;
-    } else if (current_players_sort.target == 'avgdamage') {
-      if (a_avgdamage > b_avgdamage) return -1;
-      if (a_avgdamage < b_avgdamage) return 1;
-      if (a.count < b.count) return -1;
-      if (a.count > b.count) return 1;
-      if (a.kills > b.kills) return -1;
-      if (a.kills < b.kills) return 1;
-    } else if (current_players_sort.target == 'damage') {
-      if (a.damage > b.damage) return -1;
-      if (a.damage < b.damage) return 1;
-      if (a.count < b.count) return -1;
-      if (a.count > b.count) return 1;
-      if (a.kills > b.kills) return -1;
-      if (a.kills < b.kills) return 1;
-    } else if (current_players_sort.target == 'count') {
-      if (a.count > b.count) return -1;
-      if (a.count < b.count) return 1;
-      if (a.kills > b.kills) return -1;
-      if (a.kills < b.kills) return 1;
-    }
-    // 最終的には名前
-    if (a.name > b.name) return 1;
-    if (a.name < b.name) return -1;
-    return 0;
-  });
-};
-
-// ---------------------------------------------------------
-// show_player_teams
-// ---------------------------------------------------------
-const show_player_teams = () => {
-  const target = current_select.target_teams;
-  for (const i of [0, 1, 2, 3]) {
-    const target_no = 'no' + (i + 1);
-    const s_tr = '#players_container tr th:nth-child(' + (i + 8) + ')';
-    const s_td = '#players_container tr td:nth-child(' + (i + 8) + ')';
-    const selector = s_tr + ',' + s_td;
-    if (target == 'all' || target == target_no) {
-      document.querySelectorAll(selector).forEach((item) => {
-        item.classList.remove('hide');
-      });
-    } else {
-      document.querySelectorAll(selector).forEach((item) => {
-        item.classList.add('hide');
-      });
-    }
-  }
-};
-
-// ---------------------------------------------------------
-// show_players
-// ---------------------------------------------------------
-const show_players = () => {
-  const pbody = document.getElementById('players_body');
-
-  // ソート
-  change_players_sort_header();
-  const players = sort_players();
-
-  // ソートした際の順番付け
-  let prev_count = -1;
-  let prev_value = -1;
-  for (let i = 0; i < players.length; ++i) {
-    const v = players[i];
-    let target_value = 0;
-    if (current_players_sort.target == 'avg') {
-      target_value = v.kills / v.count;
-    } else if (current_players_sort.target == 'kills') {
-      target_value = v.kills;
-    } else if (current_players_sort.target == 'avgdamage') {
-      target_value = v.damagecount > 0 ? v.damage / v.damagecount : 0;
-    } else if (current_players_sort.target == 'damage') {
-      target_value = v.damage;
-    } else if (current_players_sort.target == 'count') {
-      target_value = v.count;
-    }
-    if (prev_value == target_value) {
-      v.node.firstChild.innerText = prev_count;
-    } else {
-      v.node.firstChild.innerText = i + 1;
-      prev_count = i + 1;
-      prev_value = target_value;
-    }
-
-    // 共通のレンジIDを定義
-    const range_id = Math.floor((parseInt(v.node.firstChild.innerText, 10) - 1) / 20);
-
-    // 要素をターゲットのtbodyに追加
-    append_to_tbody('players', range_id, v.node);
-
-    // インデックスを追加
-    add_table_index_range('players', range_id);
-  }
-
-  // 表示するチームを選ぶ
-  show_player_teams();
-};
-
-// ---------------------------------------------------------
-// sort_teams
-// ---------------------------------------------------------
-const sort_teams = () => {
-  return current_teams.sort((a, b) => {
-    const t = current_teams_sort.target;
-    switch (t) {
-      case 'avgp':
-        const a_avgp = a.points / a.placements.length;
-        const b_avgp = b.points / b.placements.length;
-        if (a_avgp > b_avgp) return -1;
-        if (a_avgp < b_avgp) return 1;
-        break;
-      case 'avgpp':
-        const a_avgpp = (a.points - a.kills) / a.placements.length;
-        const b_avgpp = (b.points - b.kills) / b.placements.length;
-        if (a_avgpp > b_avgpp) return -1;
-        if (a_avgpp < b_avgpp) return 1;
-        break;
-      case 'avgk':
-        const a_avgk = a.kills / a.placements.length;
-        const b_avgk = b.kills / b.placements.length;
-        if (a_avgk > b_avgk) return -1;
-        if (a_avgk < b_avgk) return 1;
-        break;
-      case 'avgpl':
-        const a_avgpl = a.placements.reduce((p, c) => p + c, 0) / a.placements.length;
-        const b_avgpl = b.placements.reduce((p, c) => p + c, 0) / b.placements.length;
-        if (a_avgpl < b_avgpl) return -1;
-        if (a_avgpl > b_avgpl) return 1;
-        break;
-      case 'p':
-        const a_p = a.points;
-        const b_p = b.points;
-        if (a_p > b_p) return -1;
-        if (a_p < b_p) return 1;
-        break;
-      case 'pp':
-        const a_pp = a.points - a.kills;
-        const b_pp = b.points - b.kills;
-        if (a_pp > b_pp) return -1;
-        if (a_pp < b_pp) return 1;
-        break;
-      case 'k':
-        const a_k = a.kills;
-        const b_k = b.kills;
-        if (a_k > b_k) return -1;
-        if (a_k < b_k) return 1;
-        break;
-      case 'c':
-        const a_c = a.placements.length;
-        const b_c = b.placements.length;
-        if (a_c > b_c) return -1;
-        if (a_c < b_c) return 1;
-        break;
-      case '1c':
-        const a_1c = a.placements.reduce((p, c) => c == 1 ? p + 1 : p, 0) / a.placements.length;
-        const b_1c = b.placements.reduce((p, c) => c == 1 ? p + 1 : p, 0) / b.placements.length;
-        if (a_1c > b_1c) return -1;
-        if (a_1c < b_1c) return 1;
-        break;
-      case '3c':
-        const a_3c = a.placements.reduce((p, c) => c <= 3 ? p + 1 : p, 0) / a.placements.length;
-        const b_3c = b.placements.reduce((p, c) => c <= 3 ? p + 1 : p, 0) / b.placements.length;
-        if (a_3c > b_3c) return -1;
-        if (a_3c < b_3c) return 1;
-        break;
-      case '5c':
-        const a_5c = a.placements.reduce((p, c) => c <= 5 ? p + 1 : p, 0) / a.placements.length;
-        const b_5c = b.placements.reduce((p, c) => c <= 5 ? p + 1 : p, 0) / b.placements.length;
-        if (a_5c > b_5c) return -1;
-        if (a_5c < b_5c) return 1;
-        break;
-      case '10c':
-        const a_10c = a.placements.reduce((p, c) => c <= 10 ? p + 1 : p, 0) / a.placements.length;
-        const b_10c = b.placements.reduce((p, c) => c <= 10 ? p + 1 : p, 0) / b.placements.length;
-        if (a_10c > b_10c) return -1;
-        if (a_10c < b_10c) return 1;
-        break;
-    }
-    // 最終的には名前
-    if (a.name > b.name) return 1;
-    if (a.name < b.name) return -1;
-    return 0;
-  });
-};
-// ---------------------------------------------------------
-// show_teams
-// ---------------------------------------------------------
-const show_teams = () => {
-  // ソート
-  change_teams_sort_header();
-  const teams = sort_teams();
-
-  // ソートした際の順番付け
-  let prev_count = -1;
-  let prev_value = -1;
-  for (let i = 0; i < teams.length; ++i) {
-    const v = teams[i];
-    let target_value = 0;
-    switch (current_teams_sort.target) {
-      case 'avgp': target_value = v.points / v.placements.length; break;
-      case 'avgpp': target_value = (v.points - v.kills) / v.placements.length; break;
-      case 'avgk': target_value = v.kills / v.placements.length; break;
-      case 'avgpl': target_value = v.placements.reduce((p, c) => p + c, 0) / v.placements.length; break;
-      case 'p': target_value = v.points; break;
-      case 'pp': target_value = v.points - v.kills; break;
-      case 'k': target_value = v.kills; break;
-      case 'c': target_value = v.placements.length; break;
-      case '1c': target_value = v.placements.reduce((p, c) => c == 1 ? p + 1 : p, 0); break;
-      case '3c': target_value = v.placements.reduce((p, c) => c <= 3 ? p + 1 : p, 0); break;
-      case '5c': target_value = v.placements.reduce((p, c) => c <= 5 ? p + 1 : p, 0); break;
-      case '10c': target_value = v.placements.reduce((p, c) => c <= 10 ? p + 1 : p, 0); break;
-    }
-    if (prev_value == target_value) {
-      v.node.firstChild.innerText = prev_count;
-    } else {
-      v.node.firstChild.innerText = i + 1;
-      prev_count = i + 1;
-      prev_value = target_value;
-    }
-
-    // 共通のrange_idを定義
-    const range_id = Math.floor((parseInt(v.node.firstChild.innerText, 10) - 1) / 20);
-
-    // 要素をターゲットのtbodyに追加
-    append_to_tbody('teams', range_id, v.node);
-
-    // インデックスを追加
-    add_table_index_range('teams', range_id);
-  }
-};
-
-// ---------------------------------------------------------
-// append_to_tbody
-// ---------------------------------------------------------
-const append_to_tbody = (target, range_id, node) => {
-  const tbody_id = target + '_body' + range_id;
-  if (document.getElementById(tbody_id) == null) {
-    const tbody = document.createElement('tbody');
-    tbody.id = tbody_id;
-    document.getElementById(target + '_table').appendChild(tbody);
-  }
-  const tbody = document.getElementById(tbody_id);
-  tbody.appendChild(node);
-};
-
-// ---------------------------------------------------------
-// clear_table_tbody
-// ---------------------------------------------------------
-const clear_table_tbody = () => {
-  for (const target of ['players', 'teams']) {
-    const selector = 'div#' + target + '_container tbody';
-    document.querySelectorAll(selector).forEach((tbody) => {
-      // tbodyの中身をクリア
-      while (tbody.firstChild) { tbody.removeChild(tbody.firstChild); }
-    });
-  }
-};
-
-// ---------------------------------------------------------
-// show_table_tbody
-// ---------------------------------------------------------
-const show_table_tbody = () => {
-  for (const target of ['players', 'teams']) {
-    const selector = 'div#' + target + '_container tbody';
-    document.querySelectorAll(selector).forEach((tbody) => {
-      // tbodyを全て表示させる
-      tbody.classList.remove('hide');
-    });
-  }
-};
-
-// ---------------------------------------------------------
-// add_table_index_range
-// ---------------------------------------------------------
-const add_table_index_range = (target, range_id) => {
-  const index_id = target + '_table_index_' + range_id;
-  if (document.getElementById(index_id) == null) {
-    const a = document.createElement('a');
-    a.id = index_id;
-    a.innerText = ((range_id * 20) + 1) + '～' + ((range_id + 1) * (20));
-    a.addEventListener("click", (ev) => {
-      show_table_by_index(target, range_id);
-    });
-    document.getElementById(target + '_table_index').appendChild(a);
-  }
-};
-
-// ---------------------------------------------------------
-// add_table_index_all
-// ---------------------------------------------------------
-const add_table_index_all = (target) => {
-  // 全表示のインデックスリンクを追加
-  const a = document.createElement('a');
-  a.innerText = 'All';
-  a.classList.add('selected'); // 選択済みにする
-  a.addEventListener('click', () => {
-    // tbodyを全部表示させる
-    const tbody_selector = 'table#' + target + '_table tbody';
-    document.querySelectorAll(tbody_selector).forEach((tbody) => {
-      tbody.classList.remove('hide');
-    });
-
-    // 'All'のタグを選択済みにする
-    const a_selector = 'div#' + target + '_table_index a';
-    document.querySelectorAll(a_selector).forEach((a) => {
-      if (a.innerText == 'All') {
-        a.classList.add('selected');
-      } else {
-        a.classList.remove('selected');
-      }
-    });
-  });
-  document.getElementById(target + '_table_index').appendChild(a);
-};
-
-// ---------------------------------------------------------
-// clear_table_index
-// ---------------------------------------------------------
-const clear_table_index = () => {
-  for (const target of ['players', 'teams']) {
-    // インデックスを削除
-    const selector = 'div#' + target + '_table_index';
-    document.querySelectorAll(selector).forEach((div) => {
-      while (div.firstChild) { div.removeChild(div.firstChild); }
-    });
-
-    // Allのリンクを追加
-    add_table_index_all(target);
-  }
-};
-
-// ---------------------------------------------------------
 // show_target_container
 // ---------------------------------------------------------
 const show_target_container = () => {
@@ -528,38 +228,6 @@ const show_target_container = () => {
     p_container.classList.add('hide');
     t_container.classList.remove('hide');
   }
-};
-
-// ---------------------------------------------------------
-// show
-// ---------------------------------------------------------
-const show = (requeue) => {
-  // 一旦全部隠す
-  document.getElementById('players_container').classList.add('hide');
-  document.getElementById('teams_container').classList.add('hide');
-
-  // requeueがあったらいったん要素全部削除
-  if (requeue) {
-    clear_table_tbody();
-  }
-  show_table_tbody();
-
-  // インデックスは毎回作り直し
-  clear_table_index();
-
-  if (current_select.target == 'players') {
-    // プレイヤー表示
-    show_players();
-  } else if (current_select.target == 'teams') {
-    // チーム表示
-    show_teams();
-  }
-
-  // 表示非表示切り替え
-  show_target_container();
-
-  console.log(current_players);
-  console.log(current_teams);
 };
 
 // ---------------------------------------------------------
@@ -661,6 +329,17 @@ const get_current_target = () => {
 };
 
 // ---------------------------------------------------------
+// get_current_displaycount
+// ---------------------------------------------------------
+const get_current_displaycount = () => {
+  if (document.getElementById('displaycount_10').checked) return 10;
+  if (document.getElementById('displaycount_20').checked) return 20;
+  if (document.getElementById('displaycount_50').checked) return 50;
+  if (document.getElementById('displaycount_all').checked) return 0;
+  return 10;
+};
+
+// ---------------------------------------------------------
 // get_current_target_teams
 // ---------------------------------------------------------
 const get_current_target_teams = () => {
@@ -674,15 +353,14 @@ const get_current_target_teams = () => {
 // ---------------------------------------------------------
 // update_select_events
 // ---------------------------------------------------------
-const check_and_show = async () => {
-  let requeue = false;
+const check_and_show = async (force = false) => {
+  let refilter = false;
 
   // データセットが違うか確認する
   const event = get_current_radio_event();
   if (current_select.event != event) {
-    await fetch_event(event);
     current_select.event = event;
-    requeue = true;
+    worker.postMessage({ type: 'event', data: event });
   }
 
   // 絞り込み＆対象が前回と同じか確認する
@@ -698,115 +376,56 @@ const check_and_show = async () => {
     current_select.rounds = rounds;
     current_select.games = games;
     current_select.maps = maps;
-    requeue = true;
+    refilter = true;
   }
 
-  current_select.target = get_current_target();
+  if (current_select.target != get_current_target()) {
+    current_select.target = get_current_target();
+    refilter = true;
+  }
   current_select.target_teams = get_current_target_teams();
 
-  if (requeue) {
-    console.log("==event==");
-    console.log(event);
-    // 空にする
-    current_players.splice(0);
-
-    // データを絞り込む(プレイヤー)
-    for (const [k, v] of Object.entries(all_players)) {
-      if (k != v.id[0]) continue;
-      let count = 0;
-      let kills = 0;
-      let damage = 0;
-      let damagecount = 0;
-      for (const game of v.games) {
-        const cc = game.cc;
-        const r = all_rounds[cc] - game.round - 1;
-        if (!weeks[cc]) continue; // week確認
-        if (!rounds[r]) continue; // ラウンド確認
-        if (!maps[game.map]) continue; // マップ確認
-        count++;
-        kills += game.kills;
-        if ('damage' in game) {
-          if (game.damage != null) {
-            damage += game.damage;
-            damagecount++;
-          }
-        }
-      }
-      if (count < games) continue; // ゲーム数確認
-
-      // チームID→チーム名
-      const teams = [];
-      console.log(all_teams);
-      for (const id of v.teams) {
-        teams.push(id != "" && (id in all_teams) ? all_teams[id].name : "");
-      }
-
-      // playersに追加
-      current_players.push({
-        name: v.name,
-        teams: teams,
-        count: count,
-        kills: kills,
-        damage: damage,
-        damagecount: damagecount
-      });
-    }
-
-    // データを絞り込む(チーム)
-    current_teams.splice(0);
-    for (const [k, v] of Object.entries(all_teams)) {
-      let kills = 0;
-      let points = 0;
-      let placements = [];
-      for (let i = 0; i < v.games.length; ++i) {
-        if (!weeks[i]) continue; // week確認
-        for (const game of v.games[i]) {
-          const r = all_rounds[i] - game.round - 1;
-          if (!rounds[r]) continue; // ラウンド確認
-          if (!maps[game.map]) continue; // マップ確認
-          kills += game.kills;
-          points += game.points;
-          placements.push(game.placement);
-        }
-      }
-      if (placements.length == 0) continue; // 試合数0
-      if (placements.length < games) continue; // 試合数確認
-
-      // teamsに追加
-      current_teams.push({
-        name: v.name,
-        kills: kills,
-        points: points,
-        placements: placements
-      });
-    }
-
-    // 各ノードを作成する
-    create_node();
+  if (current_select.displaycount != get_current_displaycount()) {
+    current_select.displaycount = get_current_displaycount();
+    refilter = true;
   }
-  show(requeue);
+
+  if (refilter || force) {
+    worker.postMessage({
+      type: 'filter',
+      data: {
+        weeks: current_select.weeks,
+        rounds: current_select.rounds,
+        maps: current_select.maps,
+        games: current_select.games,
+        target: current_select.target,
+        displaycount: current_select.displaycount,
+        playersortkey: current_players_sort.target,
+        teamsortkey: current_teams_sort.target,
+      }
+    });
+  }
 };
 
 // ---------------------------------------------------------
-// update_select_events
+// show_events
 // ---------------------------------------------------------
-const update_select_events = () => {
+const show_events = (events) => {
   const sl = document.getElementById('select_event');
 
   // 中身の設定
-  for (const ev of all_events) {
+  for (const [id, name] of events) {
     // radioボタン
     const input = document.createElement('input');
-    const id = 'events_' + ev[0];
-    input.id = id;
+    input.id = 'events_' + id;
     input.type = 'radio';
     input.name = 'events';
     sl.appendChild(input);
 
     // ラベル
     const label = document.createElement('label');
-    label.setAttribute('for', id);
-    label.innerText = ev[1] + ' ';
+    label.setAttribute('for', input.id);
+    label.innerText = name + ' ';
     sl.appendChild(label);
   }
 
@@ -814,135 +433,57 @@ const update_select_events = () => {
   document.querySelectorAll('#select_event input:last-of-type').forEach((input) => {
     input.checked = true;
   });
-};
 
-// ---------------------------------------------------------
-// set_event_listener
-// ---------------------------------------------------------
-const set_event_listener = () => {
-  document.querySelectorAll("input").forEach((item) => {
-    item.addEventListener('change', async (e) => {
-      await check_and_show();
-    });
-  });
-
-  for (const t of current_players_sort.available) {
-    document.getElementById('players_th_' + t).addEventListener('click', async (e) => {
-      current_players_sort.target = t;
-      await check_and_show();
-    });
-  }
-
-  for (const t of current_teams_sort.available) {
-    document.getElementById('teams_th_' + t).addEventListener('click', async (e) => {
-      current_teams_sort.target = t;
-      await check_and_show();
-    });
-  }
-};
-
-// ---------------------------------------------------------
-// fetch utility
-// ---------------------------------------------------------
-const get_json = async (url) => {
-  return fetch(url)
-    .catch(e => { return null; })
-    .then(r => {
-      if (r == null) return null;
-      if (!r.ok) return null;
-      return r.json();
-    });
-};
-
-// ---------------------------------------------------------
-// fetch_players
-// ---------------------------------------------------------
-const fetch_players = async (ev) => {
-  let json = await get_json(ev + '-players.json');
-  if (json == null) return;
-  all_players = {};
-  if (Array.isArray(json)) {
-    for (const j of json) {
-      if (typeof j == 'object') {
-        if ('id' in j) {
-          for (const id of j.id) {
-            all_players[id] = j;
-          }
-        }
-      }
-    }
-  }
-};
-
-// ---------------------------------------------------------
-// fetch_teams
-// ---------------------------------------------------------
-const fetch_teams = async (ev) => {
-  let json = await get_json(ev + '-teams.json');
-  if (json == null) return;
-  if (typeof json == 'object') {
-    all_teams = json;
-  }
-};
-
-// ---------------------------------------------------------
-// fetch_rounds
-// ---------------------------------------------------------
-const fetch_rounds = async (ev) => {
-  let json = await get_json(ev + '-rounds.json');
-  if (json == null) return;
-  all_rounds = [];
-  if (Array.isArray(json)) {
-    for (const j of json) {
-      if (typeof j == 'number') {
-        all_rounds.push(j);
-      }
-    }
-  }
-};
-
-// ---------------------------------------------------------
-// fetch_event
-// ---------------------------------------------------------
-const fetch_event = async (ev) => {
-  await fetch_rounds(ev);
-  await fetch_players(ev);
-  await fetch_teams(ev);
-};
-
-// ---------------------------------------------------------
-// fetch_events
-// ---------------------------------------------------------
-const fetch_events = async () => {
-  let json = await get_json('events.json');
-  if (json == null) return;
-  if (Array.isArray(json)) {
-    for (const j of json) {
-      if (Array.isArray(j)) {
-        if (j.length == 2) {
-          all_events.push(j);
-        }
-      }
-    }
-  }
+  // 初回表示
+  check_and_show();
 };
 
 // ---------------------------------------------------------
 // first run
 // ---------------------------------------------------------
-window.onload = async (event) => {
+window.onload = (_) => {
+  const pt = new PlayersTable();
+  const tt = new TeamsTable();
+  worker.addEventListener('message', (e) => {
+    switch (e.data.type) {
+      case 'events': {
+        show_events(e.data.events);
+        document.querySelectorAll("input").forEach((item) => {
+          item.addEventListener('change', async (e) => {
+            check_and_show();
+            pt.updateShowTeams();
+          });
+        });
 
-  // イベントリストの取得＆表示
-  await fetch_events();
-  update_select_events();
+        for (const t of current_players_sort.available) {
+          document.getElementById('players_th_' + t).addEventListener('click', async (e) => {
+            if (current_players_sort.target == t) return;
+            current_players_sort.target = t;
+            check_and_show(true);
+          });
+        }
 
-  // 初回表示
-  await check_and_show();
-
-  // 項目変更を監視する
-  set_event_listener();
-
-  console.log(all_events);
-  console.log(all_players);
-  console.log(all_teams);
+        for (const t of current_teams_sort.available) {
+          document.getElementById('teams_th_' + t).addEventListener('click', async (e) => {
+            if (current_teams_sort.target == t) return;
+            current_teams_sort.target = t;
+            check_and_show(true);
+          });
+        }
+        break;
+      }
+      case 'players': {
+        change_players_sort_header();
+        pt.show(e.data.players);
+        show_target_container();
+        break;
+      }
+      case 'teams': {
+        change_teams_sort_header();
+        tt.show(e.data.teams);
+        show_target_container();
+        break;
+      }
+    }
+  });
 };

@@ -2,6 +2,7 @@
 !/index.html
 !/main.css
 !/main.js
+!/worker.js
 !/.gitignore
 !/.nojekyll
 !/events.json

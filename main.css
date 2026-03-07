@@ -17,9 +17,10 @@ span.damagecount {
   display: none;
 }
 
-table:has(th#players_th_damage.sorted, th#players_th_avgdamage.sorted) span.damagecount {
+table:has(th#players_th_damage.sorted) span.damagecount, table:has(th#players_th_avgdamage.sorted) span.damagecount {
   display: inline-block;
 }
+
 
 tr {
   background-color: #FFF;
@@ -82,3 +83,24 @@ input[type=number] {
 #teams_table_index a.selected {
   font-weight: bold;
 }
+
+tbody.updating {
+  display: none;
+}
+
+table.hide_no1 th:nth-child(8), table.hide_no1 td:nth-child(8) {
+  display: none;
+}
+
+table.hide_no2 th:nth-child(9), table.hide_no2 td:nth-child(9) {
+  display: none;
+}
+
+table.hide_no3 th:nth-child(10), table.hide_no3 td:nth-child(10) {
+  display: none;
+}
+
+table.hide_no4 th:nth-child(11), table.hide_no4 td:nth-child(11) {
+  display: none;
+}
+
