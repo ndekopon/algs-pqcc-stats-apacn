@@ -23,7 +23,7 @@ const current_players_sort = {
   available: ['avg', 'kills', 'avgdamage', 'damage', 'count']
 };
 const current_teams_sort = {
-  target: 'avgp',
+  target: 'p',
   available: ['avgp', 'avgpp', 'avgk', 'avgpl', 'p', 'pp', 'k', 'c', '1c', '3c', '5c', '10c']
 };
 
