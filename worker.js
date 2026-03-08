@@ -40,7 +40,7 @@ class CCData {
 			};
 			for (const game of player.games) {
 				if (!this.#filters.weeks[game.cc]) continue;
-				if (!this.#filters.rounds[game.round]) continue;
+				if (!this.#filters.rounds[this.#filters.rounds.length - game.round - 1]) continue;
 				if (!this.#filters.maps[game.map]) continue;
 				if ('kills' in game) {
 					stats.count++;
@@ -186,7 +186,7 @@ class CCData {
 
 			for (const cc of ccs) {
 				for (const game of team.games[cc]) {
-					if (!this.#filters.rounds[game.round]) continue;
+					if (!this.#filters.rounds[this.#filters.rounds.length - game.round - 1]) continue;
 					if (!this.#filters.maps[game.map]) continue;
 					stats.count++;
 					stats.kills += game.kills;
