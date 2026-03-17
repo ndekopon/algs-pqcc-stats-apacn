@@ -57,6 +57,8 @@ class PlayersTable {
     }
     const node = this.#players.get(id);
 
+    node.dataset.id = id;
+
     // テキストの設定
     node.children[0].innerText = player.rank;
     node.children[1].innerText = player.name;
@@ -149,6 +151,8 @@ class TeamsTable {
       this.#teams.set(id, this.#basenode.cloneNode(true));
     }
     const node = this.#teams.get(id);
+
+    node.dataset.id = id;
 
     // テキストの設定
     node.children[0].innerText = team.rank;
